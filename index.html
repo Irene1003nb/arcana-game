@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>卡牌桌游</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Serif+SC:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --bg3: #1a1a26;
+    --border: #2a2a40;
+    --border2: #3a3a58;
+    --gold: #c9a84c;
+    --gold2: #e8c97a;
+    --gold3: #f5dfa0;
+    --red: #c0392b;
+    --red2: #e74c3c;
+    --text: #e8e0d0;
+    --text2: #a09880;
+    --text3: #6a6050;
+    --purple: #6c5ce7;
+    --purple2: #a29bfe;
+    --green: #00b894;
+    --green2: #55efc4;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===== LOGIN SCREEN ===== */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 70%);
+  }
+
+  .login-box {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 360px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(201,168,76,0.1), var(--shadow);
+  }
+
+  .login-title {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+
+  .login-subtitle {
+    color: var(--text3);
+    font-size: 13px;
+    margin-bottom: 36px;
+    letter-spacing: 2px;
+  }
+
+  .login-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px;
+    outline: none;
+    text-align: center;
+    letter-spacing: 2px;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+  }
+
+  .login-input:focus { border-color: var(--gold); }
+
+  .login-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #1a1000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .login-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .login-btn:active { transform: translateY(0); }
+
+  .login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  .login-divider::before, .login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .create-room-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px;
+    color: var(--text2);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .create-room-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .login-error {
+    color: var(--red2);
+    font-size: 12px;
+    margin-top: 12px;
+    min-height: 18px;
+  }
+
+  /* ===== CREATE ROOM MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 40px;
+    width: 380px;
+    box-shadow: var(--shadow);
+  }
+
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 18px;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .modal-label {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .modal-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .modal-input:focus { border-color: var(--gold); }
+
+  .modal-btns {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .btn-primary {
+    flex: 1;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #1a1000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 12px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .btn-primary:hover { opacity: 0.9; }
+
+  .btn-secondary {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px;
+    color: var(--text2);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .btn-secondary:hover { border-color: var(--border2); }
+
+  /* ===== MAIN APP ===== */
+  #app { display: none; flex-direction: column; height: 100vh; }
+  #app.visible { display: flex; }
+
+  /* TOP BAR */
+  .topbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .topbar-title {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 16px;
+    letter-spacing: 3px;
+  }
+
+  .topbar-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .player-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--gold2);
+    letter-spacing: 1px;
+  }
+
+  .gm-badge {
+    background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(232,201,122,0.1));
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* CONTENT AREA */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 80px;
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 4px 12px;
+    cursor: pointer;
+    transition: color 0.2s;
+    color: var(--text3);
+    font-size: 11px;
+    letter-spacing: 1px;
+    border: none;
+    background: none;
+    gap: 4px;
+  }
+
+  .nav-item.active { color: var(--gold); }
+  .nav-item:hover { color: var(--text2); }
+
+  .nav-icon { font-size: 20px; }
+
+  /* ===== PAGE SECTIONS ===== */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 14px;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ===== CARD POOL ===== */
+  .pool-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .pool-card:hover { border-color: var(--border2); }
+
+  .pool-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .pool-name {
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  .pool-count {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .draw-btn {
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #1a1000;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .draw-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .draw-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* DRAW COUNT PICKER */
+  .draw-picker {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .draw-picker.open { display: flex; }
+
+  .draw-num {
+    width: 36px;
+    height: 36px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    color: var(--text2);
+  }
+
+  .draw-num:hover {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #1a1000;
+    font-weight: 600;
+  }
+
+  /* ===== DICE ===== */
+  .dice-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .dice-title {
+    font-size: 13px;
+    color: var(--gold2);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    font-family: 'Cinzel', serif;
+  }
+
+  .dice-controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .dice-control-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .dice-control-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; }
+
+  .dice-selector {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .dice-chip {
+    width: 38px;
+    height: 38px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.15s;
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  .dice-chip.selected {
+    background: var(--bg3);
+    border-color: var(--gold);
+    color: var(--gold);
+    font-weight: 600;
+  }
+
+  .dice-chip:hover { border-color: var(--gold2); color: var(--gold2); }
+
+  .roll-btn {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 24px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .roll-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .roll-btn:active { transform: translateY(0) scale(0.98); }
+
+  /* DICE RESULTS */
+  .dice-results {
+    margin-top: 20px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .dice-result-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .dice-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .dice-result-player { font-size: 12px; color: var(--gold2); letter-spacing: 1px; }
+  .dice-result-time { font-size: 11px; color: var(--text3); }
+
+  .dice-result-formula { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
+
+  .dice-result-numbers {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .dice-pip {
+    width: 32px;
+    height: 32px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--purple2);
+  }
+
+  .dice-total {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  .dice-total span { color: var(--gold2); font-weight: 600; font-size: 16px; }
+
+  /* ===== HAND CARDS ===== */
+  .hand-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+
+  .hand-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+  }
+
+  .hand-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+  }
+
+  .hand-card.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(201,168,76,0.3);
+  }
+
+  .hand-card-img {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hand-card-text {
+    width: 100%;
+    aspect-ratio: 2/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    background: var(--bg3);
+    line-height: 1.6;
+  }
+
+  .hand-card-name {
+    padding: 6px 8px;
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  .card-actions {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+    padding: 20px 8px 8px;
+    display: none;
+    gap: 4px;
+    flex-direction: column;
+  }
+
+  .hand-card:hover .card-actions { display: flex; }
+
+  .card-action-btn {
+    background: rgba(201,168,76,0.2);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: var(--gold2);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s;
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  .card-action-btn:hover { background: rgba(201,168,76,0.4); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text3);
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  /* ===== DISCARD ===== */
+  .discard-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .discard-title {
+    font-size: 13px;
+    color: var(--text2);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .discard-card-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg3);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .discard-card-thumb {
+    width: 36px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .discard-card-text-thumb {
+    width: 36px;
+    height: 48px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
+  .discard-card-info { flex: 1; }
+  .discard-card-name { font-size: 13px; color: var(--text); }
+  .discard-card-time { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .return-btn {
+    background: transparent;
+    border: 1px solid var(--green);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: var(--green);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  .return-btn:hover { background: rgba(0,184,148,0.15); }
+
+  /* ===== DISPLAY ZONE ===== */
+  .display-zone-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .display-zone-title {
+    font-size: 13px;
+    color: var(--gold2);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    font-family: 'Cinzel', serif;
+  }
+
+  .display-zone-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .display-card-item {
+    position: relative;
+    width: 80px;
+  }
+
+  .display-card-img {
+    width: 80px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border2);
+  }
+
+  .display-card-text {
+    width: 80px;
+    height: 110px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    font-size: 11px;
+    color: var(--text);
+    text-align: center;
+  }
+
+  .display-card-owner {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    border-radius: 0 0 6px 6px;
+    padding: 14px 4px 4px;
+    font-size: 10px;
+    color: var(--gold3);
+    text-align: center;
+  }
+
+  /* ===== GM PANEL ===== */
+  .gm-panel {
+    background: var(--bg2);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .gm-panel-title {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+  }
+
+  .gm-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .gm-tab {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  .gm-tab.active { background: var(--gold); color: #1a1000; border-color: var(--gold); font-weight: 600; }
+  .gm-tab:hover:not(.active) { border-color: var(--gold2); color: var(--gold2); }
+
+  .gm-section { display: none; }
+  .gm-section.active { display: block; }
+
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .player-row-name { flex: 1; font-size: 13px; color: var(--text); }
+  .player-row-code { font-size: 11px; color: var(--text3); font-family: monospace; }
+
+  .small-btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: var(--text2);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Noto Serif SC', serif;
+    white-space: nowrap;
+  }
+
+  .small-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .small-btn.danger:hover { border-color: var(--red2); color: var(--red2); }
+  .small-btn.success { border-color: var(--green); color: var(--green); }
+
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .form-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus { border-color: var(--gold); }
+
+  .form-select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .upload-area {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    color: var(--text3);
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .upload-area:hover { border-color: var(--gold); color: var(--gold2); }
+
+  .tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--text3); }
+  .tag.gm-tag { border-color: var(--gold); color: var(--gold); }
+
+  /* NOTIFICATION */
+  .notif {
+    position: fixed;
+    top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--bg2);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 12px 24px;
+    font-size: 14px;
+    color: var(--gold2);
+    z-index: 3000;
+    animation: notifIn 0.3s ease, notifOut 0.3s ease 2.7s forwards;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+
+  @keyframes notifIn { from { opacity: 0; top: 10px; } to { opacity: 1; top: 20px; } }
+  @keyframes notifOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+
+  .toggle-label { font-size: 13px; color: var(--text2); }
+
+  .toggle {
+    width: 40px; height: 22px;
+    background: var(--border2);
+    border-radius: 11px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle.on { background: var(--green); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    background: white;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: left 0.2s;
+  }
+
+  .toggle.on::after { left: 21px; }
+
+  /* PLAY CARD MODAL */
+  .play-modal {
+    display: none;
+  }
+
+  .play-modal.open {
+    display: flex;
+  }
+
+  .zone-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .zone-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 6px;
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'Noto Serif SC', serif;
+  }
+
+  .zone-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* Hidden file input */
+  .file-input { display: none; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; letter-spacing: 1px; }
+
+  .separator { height: 1px; background: var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-title">ARCANA</div>
+    <div class="login-subtitle">卡牌桌游系统</div>
+    <input class="login-input" id="login-code" type="text" placeholder="输入房间码或角色码" autocomplete="off" />
+    <button class="login-btn" onclick="handleLogin()">进入</button>
+    <div class="login-divider">或</div>
+    <button class="create-room-btn" onclick="showCreateModal()">创建新房间</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- CREATE ROOM MODAL -->
+<div class="modal-overlay" id="create-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">创建房间</div>
+    <div class="modal-label">管理员总密码</div>
+    <input class="modal-input" id="admin-pwd" type="password" placeholder="输入管理员密码" />
+    <div class="modal-label">为此房间设置GM密码（即GM登录码）</div>
+    <input class="modal-input" id="gm-code-input" type="text" placeholder="例如：room1（自定义）" />
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="hideCreateModal()">取消</button>
+      <button class="btn-primary" onclick="createRoom()">创建</button>
+    </div>
+    <div class="login-error" id="create-error"></div>
+  </div>
+</div>
+
+<!-- PLAY CARD MODAL -->
+<div class="modal-overlay play-modal" id="play-modal">
+  <div class="modal">
+    <div class="modal-title">打出卡牌</div>
+    <div class="modal-label">选择目标</div>
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <button class="btn-primary" onclick="playCardTo('display')" style="flex:1">展示区</button>
+      <button class="btn-secondary" onclick="playCardTo('public_discard')" style="flex:1">公共弃牌</button>
+      <button class="btn-secondary" onclick="playCardTo('private_discard')" style="flex:1">个人弃牌</button>
+    </div>
+    <div id="zone-selector" style="display:none">
+      <div class="modal-label">选择展示区</div>
+      <div class="zone-grid" id="zone-grid"></div>
+    </div>
+    <button class="btn-secondary" onclick="closePlayModal()" style="width:100%">取消</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">ARCANA</div>
+    <div class="topbar-player">
+      <div class="player-badge" id="player-badge">...</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- DRAW PAGE -->
+    <div class="page active" id="page-draw">
+      <div class="section-title">公共卡池</div>
+      <div id="public-pools-list"><div class="loading">加载中...</div></div>
+      <div class="separator"></div>
+      <div class="section-title">私人卡池</div>
+      <div id="private-pool-section"><div class="loading">加载中...</div></div>
+    </div>
+
+    <!-- DICE PAGE -->
+    <div class="page" id="page-dice">
+      <!-- Normal Dice -->
+      <div class="dice-section">
+        <div class="dice-title">普通骰子 · 1 ~ N</div>
+        <div class="dice-controls">
+          <div class="dice-control-group">
+            <div class="dice-control-label">骰子数量</div>
+            <div class="dice-selector" id="normal-count"></div>
+          </div>
+          <div class="dice-control-group">
+            <div class="dice-control-label">骰子面数</div>
+            <div class="dice-selector" id="normal-faces"></div>
+          </div>
+          <button class="roll-btn" onclick="rollDice('normal')">🎲 投掷</button>
+        </div>
+      </div>
+
+      <!-- Zero Dice -->
+      <div class="dice-section">
+        <div class="dice-title">有零骰子 · 0 ~ N-1</div>
+        <div class="dice-controls">
+          <div class="dice-control-group">
+            <div class="dice-control-label">骰子数量</div>
+            <div class="dice-selector" id="zero-count"></div>
+          </div>
+          <div class="dice-control-group">
+            <div class="dice-control-label">骰子面数</div>
+            <div class="dice-selector" id="zero-faces"></div>
+          </div>
+          <button class="roll-btn" style="background:linear-gradient(135deg,#00b894,#55efc4);color:#001a12" onclick="rollDice('zero')">🎲 投掷</button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="section-title">投掷记录</div>
+      <div class="dice-results" id="dice-results">
+        <div class="empty-state">暂无投掷记录</div>
+      </div>
+    </div>
+
+    <!-- HAND PAGE -->
+    <div class="page" id="page-hand">
+      <div class="section-title" id="hand-title">我的手牌</div>
+
+      <!-- GM: player selector -->
+      <div id="gm-hand-selector" style="display:none; margin-bottom:16px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;" id="hand-player-tabs"></div>
+      </div>
+
+      <div class="hand-grid" id="hand-grid">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+
+    <!-- DISCARD PAGE -->
+    <div class="page" id="page-discard">
+      <div class="discard-section">
+        <div class="discard-title">个人弃牌区</div>
+        <div id="private-discard-list"><div class="empty-state">暂无弃牌</div></div>
+      </div>
+      <div class="discard-section" id="public-discard-section" style="display:none">
+        <div class="discard-title">公共弃牌区（GM可见）</div>
+        <div id="public-discard-list"><div class="empty-state">暂无弃牌</div></div>
+      </div>
+    </div>
+
+    <!-- DISPLAY ZONE PAGE -->
+    <div class="page" id="page-display">
+      <div id="display-zones-list"><div class="loading">加载中...</div></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="switchPage('draw', this)">
+      <span class="nav-icon">🃏</span>抽卡
+    </button>
+    <button class="nav-item" onclick="switchPage('dice', this)">
+      <span class="nav-icon">🎲</span>骰子
+    </button>
+    <button class="nav-item" onclick="switchPage('hand', this)">
+      <span class="nav-icon">✋</span>手牌
+    </button>
+    <button class="nav-item" onclick="switchPage('discard', this)">
+      <span class="nav-icon">🗑️</span>弃牌
+    </button>
+    <button class="nav-item" onclick="switchPage('display', this)">
+      <span class="nav-icon">👁️</span>展示区
+    </button>
+  </div>
+</div>
+
+<!-- GM PANEL (shown in hand page for GM) -->
+
+<script>
+const SUPABASE_URL = 'https://gfesocpvhhchgyheibqt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmZXNvY3B2aGhjaGd5aGVpYnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNDgwMzQsImV4cCI6MjA5NTgyNDAzNH0.uFr9RObNZ6P8ssHqfoFeOiw38-TZ9lL7ptuGydJOfgE';
+const ADMIN_PASSWORD = 'arcana_admin_2024'; // 管理员总密码
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentPlayer = null;
+let currentRoom = null;
+let selectedHandCard = null;
+let viewingPlayerId = null; // for GM hand view
+
+// ===== DICE INIT =====
+function initDice() {
+  const counts = [1,2,3,4,5,6,7,8,9,10];
+  const faces = [2,3,4,6,8,10,12,20,100];
+
+  ['normal','zero'].forEach(type => {
+    const cEl = document.getElementById(`${type}-count`);
+    const fEl = document.getElementById(`${type}-faces`);
+
+    counts.forEach((n,i) => {
+      const d = document.createElement('div');
+      d.className = 'dice-chip' + (i===0?' selected':'');
+      d.textContent = n;
+      d.onclick = () => { cEl.querySelectorAll('.dice-chip').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); };
+      cEl.appendChild(d);
+    });
+
+    faces.forEach((n,i) => {
+      const d = document.createElement('div');
+      d.className = 'dice-chip' + (i===3?' selected':'');
+      d.textContent = n;
+      d.onclick = () => { fEl.querySelectorAll('.dice-chip').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); };
+      fEl.appendChild(d);
+    });
+  });
+}
+
+// ===== LOGIN =====
+async function handleLogin() {
+  const code = document.getElementById('login-code').value.trim();
+  if (!code) return;
+
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+
+  // Check if GM code
+  const { data: rooms } = await sb.from('rooms').select('*').eq('room_code', code);
+  if (rooms && rooms.length > 0) {
+    const room = rooms[0];
+    currentRoom = room;
+    // Find GM player
+    const { data: gm } = await sb.from('players').select('*').eq('room_id', room.id).eq('is_gm', true);
+    if (gm && gm.length > 0) {
+      currentPlayer = gm[0];
+      enterApp();
+      return;
+    }
+  }
+
+  // Check player code
+  const { data: players } = await sb.from('players').select('*, rooms(*)').eq('access_code', code);
+  if (players && players.length > 0) {
+    currentPlayer = players[0];
+    currentRoom = players[0].rooms;
+    enterApp();
+    return;
+  }
+
+  err.textContent = '无效的房间码或角色码，请检查后重试';
+}
+
+function enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+
+  const badge = document.getElementById('player-badge');
+  badge.textContent = currentPlayer.name;
+  if (currentPlayer.is_gm) badge.classList.add('gm-badge');
+
+  viewingPlayerId = currentPlayer.id;
+
+  initDice();
+  loadDrawPage();
+  loadDisplayZones();
+  loadDiscard();
+  subscribeRealtime();
+
+  if (currentPlayer.is_gm) setupGMExtras();
+}
+
+// ===== CREATE ROOM =====
+function showCreateModal() { document.getElementById('create-modal').style.display='flex'; }
+function hideCreateModal() { document.getElementById('create-modal').style.display='none'; }
+
+async function createRoom() {
+  const pwd = document.getElementById('admin-pwd').value.trim();
+  const gmCode = document.getElementById('gm-code-input').value.trim();
+  const err = document.getElementById('create-error');
+  err.textContent = '';
+
+  if (pwd !== ADMIN_PASSWORD) { err.textContent = '管理员密码错误'; return; }
+  if (!gmCode) { err.textContent = '请填写GM登录码'; return; }
+
+  // Check if code exists
+  const { data: existing } = await sb.from('rooms').select('id').eq('room_code', gmCode);
+  if (existing && existing.length > 0) { err.textContent = '该房间码已存在'; return; }
+
+  // Get next room number
+  const { data: allRooms } = await sb.from('rooms').select('room_number').order('room_number', {ascending:false}).limit(1);
+  const nextNum = allRooms && allRooms.length > 0 ? allRooms[0].room_number + 1 : 1;
+
+  const { data: room, error } = await sb.from('rooms').insert({
+    room_code: gmCode,
+    room_number: nextNum,
+    admin_password: pwd
+  }).select().single();
+
+  if (error) { err.textContent = '创建失败：' + error.message; return; }
+
+  // Create GM player
+  const { data: gm } = await sb.from('players').insert({
+    room_id: room.id,
+    name: '王座',
+    access_code: gmCode,
+    is_gm: true,
+    seat_number: 0
+  }).select().single();
+
+  // Create 6 display zones
+  for (let i = 1; i <= 6; i++) {
+    await sb.from('display_zones').insert({
+      room_id: room.id,
+      zone_number: i,
+      name: `展示区${i}`,
+      visible_to: []
+    });
+  }
+
+  hideCreateModal();
+  showNotif(`房间创建成功！GM码：${gmCode}`);
+  document.getElementById('login-code').value = gmCode;
+}
+
+// ===== DRAW PAGE =====
+async function loadDrawPage() {
+  await loadPublicPools();
+  await loadPrivatePool();
+}
+
+async function loadPublicPools() {
+  const el = document.getElementById('public-pools-list');
+  const { data: pools } = await sb.from('public_pools').select('*').eq('room_id', currentRoom.id).order('created_at');
+
+  if (!pools || pools.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无公共卡池</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  for (const pool of pools) {
+    const { count } = await sb.from('cards').select('*', {count:'exact',head:true}).eq('pool_id', pool.id).eq('is_drawn', false);
+    el.appendChild(createPoolCard(pool, count || 0, 'public'));
+  }
+}
+
+async function loadPrivatePool() {
+  const el = document.getElementById('private-pool-section');
+  const { data: pp } = await sb.from('private_pools').select('*').eq('player_id', currentPlayer.id);
+
+  if (!pp || pp.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无私人卡池</div>';
+    return;
+  }
+
+  const pool = pp[0];
+  const { count } = await sb.from('cards').select('*', {count:'exact',head:true}).eq('pool_id', pool.id).eq('is_drawn', false);
+
+  el.innerHTML = '';
+  const fakePool = { id: pool.id, name: `${currentPlayer.name}的私人卡池`, allow_duplicates: false };
+  el.appendChild(createPoolCard(fakePool, count || 0, 'private'));
+}
+
+function createPoolCard(pool, count, poolType) {
+  const div = document.createElement('div');
+  div.className = 'pool-card';
+  div.innerHTML = `
+    <div class="pool-header">
+      <div>
+        <div class="pool-name">${pool.name}</div>
+        <div class="pool-count" style="margin-top:4px">剩余 ${count} 张</div>
+      </div>
+      <button class="draw-btn" onclick="toggleDrawPicker(this, '${pool.id}', '${poolType}', ${pool.allow_duplicates})">抽卡</button>
+    </div>
+    <div class="draw-picker">
+      ${Array.from({length:20},(_,i)=>`<div class="draw-num" onclick="confirmDraw('${pool.id}','${poolType}',${i+1},${pool.allow_duplicates},this)">${i+1}</div>`).join('')}
+    </div>
+  `;
+  return div;
+}
+
+function toggleDrawPicker(btn, poolId, poolType, allowDup) {
+  const picker = btn.closest('.pool-card').querySelector('.draw-picker');
+  picker.classList.toggle('open');
+}
+
+async function confirmDraw(poolId, poolType, amount, allowDup, el) {
+  el.closest('.draw-picker').classList.remove('open');
+
+  let query = sb.from('cards').select('*').eq('pool_id', poolId);
+  if (!allowDup) query = query.eq('is_drawn', false);
+  const { data: available } = await query;
+
+  if (!available || available.length === 0) { showNotif('卡池已空！'); return; }
+
+  const toDraw = Math.min(amount, available.length);
+  const shuffled = available.sort(() => Math.random() - 0.5).slice(0, toDraw);
+
+  for (const card of shuffled) {
+    await sb.from('hand_cards').insert({
+      room_id: currentRoom.id,
+      player_id: currentPlayer.id,
+      card_id: card.id,
+      source_pool_type: poolType,
+      source_pool_id: poolId
+    });
+    if (!allowDup) {
+      await sb.from('cards').update({ is_drawn: true }).eq('id', card.id);
+    }
+  }
+
+  showNotif(`抽到 ${toDraw} 张牌！`);
+  if (document.getElementById('page-hand').classList.contains('active')) loadHand();
+  loadDrawPage();
+}
+
+// ===== DICE =====
+async function rollDice(type) {
+  const countEl = document.getElementById(`${type}-count`).querySelector('.selected');
+  const facesEl = document.getElementById(`${type}-faces`).querySelector('.selected');
+  if (!countEl || !facesEl) return;
+
+  const num = parseInt(countEl.textContent);
+  const faces = parseInt(facesEl.textContent);
+  const results = [];
+
+  for (let i = 0; i < num; i++) {
+    if (type === 'normal') results.push(Math.floor(Math.random() * faces) + 1);
+    else results.push(Math.floor(Math.random() * faces));
+  }
+
+  const total = results.reduce((a,b) => a+b, 0);
+
+  await sb.from('dice_logs').insert({
+    room_id: currentRoom.id,
+    player_id: currentPlayer.id,
+    dice_type: type,
+    num_dice: num,
+    num_faces: faces,
+    results,
+    total
+  });
+}
+
+async function loadDiceHistory() {
+  const { data: logs } = await sb.from('dice_logs')
+    .select('*, players(name)')
+    .eq('room_id', currentRoom.id)
+    .order('rolled_at', {ascending: false})
+    .limit(20);
+
+  renderDiceResults(logs || []);
+}
+
+function renderDiceResults(logs) {
+  const el = document.getElementById('dice-results');
+  if (!logs.length) { el.innerHTML = '<div class="empty-state">暂无投掷记录</div>'; return; }
+
+  el.innerHTML = logs.map(log => {
+    const time = new Date(log.rolled_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const range = log.dice_type === 'normal' ? `1~${log.num_faces}` : `0~${log.num_faces-1}`;
+    return `
+      <div class="dice-result-item">
+        <div class="dice-result-header">
+          <span class="dice-result-player">⚔ ${log.players?.name || '???'}</span>
+          <span class="dice-result-time">${time}</span>
+        </div>
+        <div class="dice-result-formula">${log.num_dice}d${log.num_faces} · ${log.dice_type==='normal'?'普通':'有零'} · 范围${range}</div>
+        <div class="dice-result-numbers">
+          ${log.results.map(r=>`<div class="dice-pip">${r}</div>`).join('')}
+        </div>
+        <div class="dice-total">合计：<span>${log.total}</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== HAND =====
+async function loadHand(playerId) {
+  const pid = playerId || viewingPlayerId || currentPlayer.id;
+  const el = document.getElementById('hand-grid');
+  el.innerHTML = '<div class="loading">加载中...</div>';
+
+  const { data: handCards } = await sb.from('hand_cards')
+    .select('*, cards(*)')
+    .eq('player_id', pid)
+    .order('acquired_at', {ascending: false});
+
+  if (!handCards || handCards.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="grid-column:1/-1">手牌为空</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  handCards.forEach(hc => {
+    const card = hc.cards;
+    const div = document.createElement('div');
+    div.className = 'hand-card';
+    div.dataset.hcid = hc.id;
+    div.dataset.cardid = card.id;
+
+    let cardContent = '';
+    if (card.card_type === 'image') {
+      cardContent = `<img class="hand-card-img" src="${card.content}" alt="${card.name||''}" />`;
+    } else {
+      cardContent = `<div class="hand-card-text">${card.content}</div>`;
+    }
+
+    const isMyCard = pid === currentPlayer.id;
+    const gmActions = currentPlayer.is_gm ? `
+      <div class="card-action-btn" onclick="gmMoveCard('${hc.id}', '${pid}')">移动</div>
+      <div class="card-action-btn danger" onclick="gmDeleteCard('${hc.id}')">删除</div>
+    ` : '';
+
+    const playerActions = isMyCard ? `
+      <div class="card-action-btn" onclick="openPlayModal('${hc.id}')">打出</div>
+    ` : '';
+
+    div.innerHTML = `
+      ${cardContent}
+      ${card.name ? `<div class="hand-card-name">${card.name}</div>` : ''}
+      <div class="card-actions">
+        ${playerActions}
+        ${gmActions}
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ===== PLAY CARD MODAL =====
+let playingHandCardId = null;
+
+function openPlayModal(hcId) {
+  playingHandCardId = hcId;
+  document.getElementById('zone-selector').style.display = 'none';
+  document.getElementById('play-modal').classList.add('open');
+}
+
+function closePlayModal() {
+  document.getElementById('play-modal').classList.remove('open');
+  playingHandCardId = null;
+}
+
+async function playCardTo(target) {
+  if (target === 'display') {
+    await loadZoneButtons();
+    document.getElementById('zone-selector').style.display = 'block';
+    return;
+  }
+
+  if (target === 'public_discard' || target === 'private_discard') {
+    const hc = await sb.from('hand_cards').select('*, cards(*)').eq('id', playingHandCardId).single();
+    await sb.from('discard_cards').insert({
+      room_id: currentRoom.id,
+      player_id: currentPlayer.id,
+      card_id: hc.data.card_id,
+      hand_card_id: playingHandCardId,
+      discard_type: target === 'public_discard' ? 'public' : 'private'
+    });
+    await sb.from('hand_cards').delete().eq('id', playingHandCardId);
+    closePlayModal();
+    showNotif('已弃牌');
+    loadHand();
+    loadDiscard();
+  }
+}
+
+async function loadZoneButtons() {
+  const { data: zones } = await sb.from('display_zones').select('*').eq('room_id', currentRoom.id).order('zone_number');
+  const grid = document.getElementById('zone-grid');
+  grid.innerHTML = '';
+  zones.forEach(z => {
+    const btn = document.createElement('button');
+    btn.className = 'zone-btn';
+    btn.textContent = z.name;
+    btn.onclick = () => playToZone(z.id);
+    grid.appendChild(btn);
+  });
+}
+
+async function playToZone(zoneId) {
+  const { data: hc } = await sb.from('hand_cards').select('*').eq('id', playingHandCardId).single();
+  await sb.from('display_cards').insert({
+    room_id: currentRoom.id,
+    zone_id: zoneId,
+    player_id: currentPlayer.id,
+    card_id: hc.card_id,
+    hand_card_id: playingHandCardId
+  });
+  await sb.from('hand_cards').delete().eq('id', playingHandCardId);
+  closePlayModal();
+  showNotif('已打出到展示区');
+  loadHand();
+  loadDisplayZones();
+}
+
+// ===== DISCARD =====
+async function loadDiscard() {
+  // Private discard
+  const { data: priv } = await sb.from('discard_cards')
+    .select('*, cards(*)')
+    .eq('player_id', currentPlayer.id)
+    .eq('discard_type', 'private')
+    .order('discarded_at', {ascending: false});
+
+  const privEl = document.getElementById('private-discard-list');
+  if (!priv || priv.length === 0) {
+    privEl.innerHTML = '<div class="empty-state">暂无弃牌</div>';
+  } else {
+    privEl.innerHTML = priv.map(dc => discardCardHTML(dc, true)).join('');
+  }
+
+  // Public discard (GM only)
+  if (currentPlayer.is_gm) {
+    document.getElementById('public-discard-section').style.display = 'block';
+    const { data: pub } = await sb.from('discard_cards')
+      .select('*, cards(*), players(name)')
+      .eq('room_id', currentRoom.id)
+      .eq('discard_type', 'public')
+      .order('discarded_at', {ascending: false});
+
+    const pubEl = document.getElementById('public-discard-list');
+    if (!pub || pub.length === 0) {
+      pubEl.innerHTML = '<div class="empty-state">暂无弃牌</div>';
+    } else {
+      pubEl.innerHTML = pub.map(dc => discardCardHTML(dc, false, true)).join('');
+    }
+  }
+}
+
+function discardCardHTML(dc, canReturn, showOwner = false) {
+  const card = dc.cards;
+  const thumb = card.card_type === 'image'
+    ? `<img class="discard-card-thumb" src="${card.content}" />`
+    : `<div class="discard-card-text-thumb">文字</div>`;
+  const time = new Date(dc.discarded_at).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const returnBtn = canReturn ? `<button class="return-btn" onclick="returnFromDiscard('${dc.id}','${dc.card_id}')">拿回</button>` : '';
+  const owner = showOwner && dc.players ? `<div style="font-size:11px;color:var(--text3)">${dc.players.name}</div>` : '';
+  return `
+    <div class="discard-card-item">
+      ${thumb}
+      <div class="discard-card-info">
+        <div class="discard-card-name">${card.name || (card.card_type==='text' ? card.content.slice(0,20) : '图片卡')}</div>
+        ${owner}
+        <div class="discard-card-time">${time}</div>
+      </div>
+      ${returnBtn}
+    </div>
+  `;
+}
+
+async function returnFromDiscard(discardId, cardId) {
+  await sb.from('hand_cards').insert({
+    room_id: currentRoom.id,
+    player_id: currentPlayer.id,
+    card_id: cardId
+  });
+  await sb.from('discard_cards').delete().eq('id', discardId);
+  showNotif('已拿回手牌');
+  loadDiscard();
+  loadHand();
+}
+
+// ===== DISPLAY ZONES =====
+async function loadDisplayZones() {
+  const el = document.getElementById('display-zones-list');
+  const { data: zones } = await sb.from('display_zones').select('*').eq('room_id', currentRoom.id).order('zone_number');
+  if (!zones) return;
+
+  el.innerHTML = '';
+  for (const zone of zones) {
+    // Check visibility
+    const canSee = currentPlayer.is_gm || zone.visible_to.length === 0 || zone.visible_to.includes(currentPlayer.id);
+    if (!canSee) continue;
+
+    const { data: dCards } = await sb.from('display_cards')
+      .select('*, cards(*), players(name)')
+      .eq('zone_id', zone.id)
+      .order('played_at');
+
+    const div = document.createElement('div');
+    div.className = 'display-zone-card';
+
+    const cardsHTML = dCards && dCards.length > 0
+      ? dCards.map(dc => {
+          const card = dc.cards;
+          const content = card.card_type === 'image'
+            ? `<img class="display-card-img" src="${card.content}" />`
+            : `<div class="display-card-text">${card.content}</div>`;
+          return `<div class="display-card-item">${content}<div class="display-card-owner">${dc.players?.name||'?'}</div></div>`;
+        }).join('')
+      : '<div style="color:var(--text3);font-size:12px">暂无卡牌</div>';
+
+    div.innerHTML = `
+      <div class="display-zone-title">${zone.name}</div>
+      <div class="display-zone-cards">${cardsHTML}</div>
+    `;
+    el.appendChild(div);
+  }
+}
+
+// ===== GM EXTRAS =====
+function setupGMExtras() {
+  document.getElementById('gm-hand-selector').style.display = 'block';
+  loadHandPlayerTabs();
+}
+
+async function loadHandPlayerTabs() {
+  const { data: players } = await sb.from('players').select('*').eq('room_id', currentRoom.id).order('seat_number');
+  const el = document.getElementById('hand-player-tabs');
+  el.innerHTML = '';
+  players.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'gm-tab' + (p.id === currentPlayer.id ? ' active' : '');
+    btn.textContent = p.name;
+    btn.onclick = () => {
+      el.querySelectorAll('.gm-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      viewingPlayerId = p.id;
+      loadHand(p.id);
+    };
+    el.appendChild(btn);
+  });
+}
+
+async function gmDeleteCard(hcId) {
+  if (!confirm('确定删除这张手牌？')) return;
+  await sb.from('hand_cards').delete().eq('id', hcId);
+  showNotif('已删除');
+  loadHand(viewingPlayerId);
+}
+
+async function gmMoveCard(hcId, fromPlayerId) {
+  // Simple: show prompt to select target pool
+  const target = prompt('移动到哪里？\n输入 "public" + 卡池名 或 "private" + 玩家名\n例如：public公共卡池1 或 private小白');
+  if (!target) return;
+  showNotif('移动功能开发中，敬请期待');
+}
+
+// ===== REALTIME =====
+function subscribeRealtime() {
+  sb.channel('room-' + currentRoom.id)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_logs', filter: `room_id=eq.${currentRoom.id}` }, () => {
+      if (document.getElementById('page-dice').classList.contains('active')) loadDiceHistory();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'hand_cards', filter: `room_id=eq.${currentRoom.id}` }, () => {
+      if (document.getElementById('page-hand').classList.contains('active')) loadHand(viewingPlayerId);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'display_cards', filter: `room_id=eq.${currentRoom.id}` }, () => {
+      if (document.getElementById('page-display').classList.contains('active')) loadDisplayZones();
+    })
+    .subscribe();
+}
+
+// ===== NAV =====
+function switchPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+
+  if (name === 'dice') loadDiceHistory();
+  if (name === 'hand') loadHand(viewingPlayerId);
+  if (name === 'discard') loadDiscard();
+  if (name === 'display') loadDisplayZones();
+}
+
+// ===== NOTIF =====
+function showNotif(msg) {
+  const el = document.createElement('div');
+  el.className = 'notif';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ===== ENTER KEY =====
+document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+</script>
+</body>
+</html>
