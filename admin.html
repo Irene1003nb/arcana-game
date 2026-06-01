@@ -266,7 +266,10 @@
 <div id="admin-panel">
   <div class="topbar">
     <div class="topbar-title">ARCANA · 王座后台</div>
-    <div class="topbar-info" id="room-info"></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="topbar-info" id="room-info"></div>
+      <button onclick="adminLogout()" style="background:none;border:1px solid #3a3a58;border-radius:8px;padding:5px 12px;color:#6a6050;font-size:11px;cursor:pointer;font-family:'Noto Serif SC',serif">退出</button>
+    </div>
   </div>
 
   <div class="layout">
@@ -380,6 +383,15 @@ let currentRoom = null;
 let currentGM = null;
 let allPlayers = [];
 
+function enterAdmin(roomCode) {
+  document.getElementById('admin-login').style.display = 'none';
+  document.getElementById('admin-panel').classList.add('visible');
+  document.getElementById('room-info').textContent = `房间：${roomCode} · GM：${currentGM.name}`;
+  // Save session
+  localStorage.setItem('arcana_admin_code', roomCode);
+  loadAll();
+}
+
 async function adminLogin() {
   const roomCode = document.getElementById('al-room').value.trim();
   const pwd = document.getElementById('al-pwd').value.trim();
@@ -395,12 +407,24 @@ async function adminLogin() {
   const { data: gm } = await sb.from('players').select('*').eq('room_id', currentRoom.id).eq('is_gm', true);
   currentGM = gm[0];
 
-  document.getElementById('admin-login').style.display = 'none';
-  document.getElementById('admin-panel').classList.add('visible');
-  document.getElementById('room-info').textContent = `房间：${roomCode} · GM：${currentGM.name}`;
-
-  loadAll();
+  enterAdmin(roomCode);
 }
+
+async function tryAdminAutoLogin() {
+  const saved = localStorage.getItem('arcana_admin_code');
+  if (!saved) return;
+  try {
+    const { data: rooms } = await sb.from('rooms').select('*').eq('room_code', saved);
+    if (!rooms || rooms.length === 0) { localStorage.removeItem('arcana_admin_code'); return; }
+    currentRoom = rooms[0];
+    const { data: gm } = await sb.from('players').select('*').eq('room_id', currentRoom.id).eq('is_gm', true);
+    if (!gm || gm.length === 0) { localStorage.removeItem('arcana_admin_code'); return; }
+    currentGM = gm[0];
+    enterAdmin(saved);
+  } catch(e) { localStorage.removeItem('arcana_admin_code'); }
+}
+
+tryAdminAutoLogin();
 
 async function loadAll() {
   await loadPlayers();
@@ -838,6 +862,11 @@ function showSection(name, btn) {
   if (name === 'hands') loadHandTabs();
   if (name === 'display') loadDisplayZoneSettings();
   if (name === 'discard') loadPublicDiscard();
+}
+
+function adminLogout() {
+  localStorage.removeItem('arcana_admin_code');
+  location.reload();
 }
 
 function showNotif(msg) {
