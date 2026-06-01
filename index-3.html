@@ -1176,6 +1176,28 @@ let currentRoom = null;
 let selectedHandCard = null;
 let viewingPlayerId = null; // for GM hand view
 
+// ===== AUTO LOGIN =====
+async function tryAutoLogin() {
+  const saved = localStorage.getItem('arcana_code');
+  if (!saved) return;
+  try {
+    const { data: rooms } = await sb.from('rooms').select('*').eq('room_code', saved);
+    if (rooms && rooms.length > 0) {
+      currentRoom = rooms[0];
+      const { data: gm } = await sb.from('players').select('*').eq('room_id', currentRoom.id).eq('is_gm', true);
+      if (gm && gm.length > 0) { currentPlayer = gm[0]; enterApp(); return; }
+    }
+    const { data: players } = await sb.from('players').select('*, rooms(*)').eq('access_code', saved);
+    if (players && players.length > 0) {
+      currentPlayer = players[0];
+      currentRoom = players[0].rooms;
+      enterApp();
+      return;
+    }
+  } catch(e) { console.log('auto login error', e); }
+  localStorage.removeItem('arcana_code');
+}
+
 // ===== DICE INIT =====
 function initDice() {
   const counts = [1,2,3,4,5,6,7,8,9,10];
@@ -1768,30 +1790,13 @@ function showNotif(msg) {
 // ===== ENTER KEY =====
 document.getElementById('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
 
-// ===== AUTO LOGIN ON REFRESH =====
-window.addEventListener('load', async () => {
-  const saved = localStorage.getItem('arcana_code');
-  if (!saved) return;
-  const { data: rooms } = await sb.from('rooms').select('*').eq('room_code', saved);
-  if (rooms && rooms.length > 0) {
-    currentRoom = rooms[0];
-    const { data: gm } = await sb.from('players').select('*').eq('room_id', currentRoom.id).eq('is_gm', true);
-    if (gm && gm.length > 0) { currentPlayer = gm[0]; enterApp(); return; }
-  }
-  const { data: players } = await sb.from('players').select('*, rooms(*)').eq('access_code', saved);
-  if (players && players.length > 0) {
-    currentPlayer = players[0];
-    currentRoom = players[0].rooms;
-    enterApp();
-    return;
-  }
-  localStorage.removeItem('arcana_code');
-});
-
 function logout() {
   localStorage.removeItem('arcana_code');
   location.reload();
 }
+
+// trigger auto login
+tryAutoLogin();
 </script>
 </body>
 </html>
