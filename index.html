@@ -1003,10 +1003,8 @@
   <div class="login-box">
     <div class="login-title">ARCANA</div>
     <div class="login-subtitle">卡牌桌游系统</div>
-    <input class="login-input" id="login-code" type="text" placeholder="输入房间码或角色码" autocomplete="off" />
+    <input class="login-input" id="login-code" type="text" placeholder="输入角色码" autocomplete="off" />
     <button class="login-btn" onclick="handleLogin()">进入</button>
-    <div class="login-divider">或</div>
-    <button class="create-room-btn" onclick="showCreateModal()">创建新房间</button>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
@@ -1167,7 +1165,7 @@
 <script>
 const SUPABASE_URL = 'https://gfesocpvhhchgyheibqt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmZXNvY3B2aGhjaGd5aGVpYnF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNDgwMzQsImV4cCI6MjA5NTgyNDAzNH0.uFr9RObNZ6P8ssHqfoFeOiw38-TZ9lL7ptuGydJOfgE';
-const ADMIN_PASSWORD = 'Irene1003'; // 管理员总密码
+const ADMIN_PASSWORD = 'arcana_admin_2024'; // 管理员总密码
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
