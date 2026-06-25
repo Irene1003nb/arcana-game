@@ -259,6 +259,20 @@
     <input type="password" id="al-pwd" placeholder="管理员总密码" />
     <button class="btn btn-gold btn-full" onclick="adminLogin()">进入后台</button>
     <div class="err" id="al-err"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin:20px 0 8px">
+      <div style="flex:1;height:1px;background:#2a2a40"></div>
+      <span style="font-size:12px;color:#6a6050">或</span>
+      <div style="flex:1;height:1px;background:#2a2a40"></div>
+    </div>
+    <button class="btn btn-outline btn-full" onclick="showCreateRoomBox()">创建新房间</button>
+    <div id="create-room-box" style="display:none;margin-top:16px">
+      <div style="font-size:12px;color:#6a6050;margin-bottom:6px">管理员密码</div>
+      <input type="password" id="cr-pwd" placeholder="输入管理员密码" />
+      <div style="font-size:12px;color:#6a6050;margin-bottom:6px">GM登录码</div>
+      <input type="text" id="cr-gm-code2" placeholder="例如：room1（自定义）" />
+      <button class="btn btn-gold btn-full" onclick="createRoomPublic()">创建房间</button>
+      <div class="err" id="cr-err2"></div>
+    </div>
   </div>
 </div>
 
@@ -433,6 +447,34 @@ function enterAdmin(roomCode) {
   // Save session
   localStorage.setItem('arcana_admin_code', roomCode);
   loadAll();
+}
+
+function showCreateRoomBox() {
+  const box = document.getElementById('create-room-box');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+async function createRoomPublic() {
+  const pwd = document.getElementById('cr-pwd').value.trim();
+  const gmCode = document.getElementById('cr-gm-code2').value.trim();
+  const err = document.getElementById('cr-err2');
+  err.textContent = '';
+  if (pwd !== ADMIN_PASSWORD) { err.textContent = '管理员密码错误'; return; }
+  if (!gmCode) { err.textContent = '请填写GM登录码'; return; }
+  const { data: existing } = await sb.from('rooms').select('id').eq('room_code', gmCode);
+  if (existing && existing.length > 0) { err.textContent = '该房间码已存在，请换一个'; return; }
+  const { data: allRooms } = await sb.from('rooms').select('room_number').order('room_number', {ascending:false}).limit(1);
+  const nextNum = allRooms && allRooms.length > 0 ? allRooms[0].room_number + 1 : 1;
+  const { data: room, error } = await sb.from('rooms').insert({
+    room_code: gmCode, room_number: nextNum, admin_password: pwd
+  }).select().single();
+  if (error) { err.textContent = '创建失败：' + error.message; return; }
+  await sb.from('players').insert({ room_id: room.id, name: '王座', access_code: gmCode, is_gm: true, seat_number: 0 });
+  for (let i = 1; i <= 6; i++) {
+    await sb.from('display_zones').insert({ room_id: room.id, zone_number: i, name: '展示区' + i, visible_to: [] });
+  }
+  err.style.color = 'var(--green)';
+  err.textContent = '✅ 创建成功！GM码：' + gmCode;
 }
 
 async function adminLogin() {
