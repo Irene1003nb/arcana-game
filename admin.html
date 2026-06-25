@@ -308,6 +308,27 @@
         </div>
       </div>
 
+      <!-- CREATE ROOM -->
+      <div class="section active" id="sec-createroom">
+        <div class="section-title">创建房间</div>
+        <div class="card">
+          <div class="card-title">新建游戏房间</div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:6px">GM登录码</div>
+            <input type="text" id="cr-gm-code" placeholder="例如：room1（自定义）" />
+          </div>
+          <button class="btn btn-gold btn-full" onclick="createRoomFromAdmin()">创建房间</button>
+          <div class="err" id="cr-err"></div>
+        </div>
+        <div class="card" id="cr-result" style="display:none">
+          <div class="card-title">✅ 房间创建成功</div>
+          <div style="font-size:13px;color:var(--text2);line-height:2">
+            <div>GM登录码：<span id="cr-show-code" style="color:var(--gold);font-family:monospace"></span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:8px">请用此码进入GM后台，并为玩家创建角色</div>
+          </div>
+        </div>
+      </div>
+
       <!-- PLAYERS -->
       <div class="section" id="sec-players">
         <div class="section-title">角色管理</div>
@@ -881,6 +902,13 @@ function showSection(name, btn) {
     btn.classList.add('active');
     return;
   }
+  if (name === 'createroom') {
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
+    document.getElementById('sec-createroom').classList.add('active');
+    btn.classList.add('active');
+    return;
+  }
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
@@ -931,6 +959,29 @@ async function createRoomFromAdmin() {
     });
   }
 
+  document.getElementById('cr-show-code').textContent = gmCode;
+  document.getElementById('cr-result').style.display = 'block';
+  document.getElementById('cr-gm-code').value = '';
+  showNotif('房间创建成功！');
+}
+
+async function createRoomFromAdmin() {
+  const gmCode = document.getElementById('cr-gm-code').value.trim();
+  const err = document.getElementById('cr-err');
+  err.textContent = '';
+  if (!gmCode) { err.textContent = '请填写GM登录码'; return; }
+  const { data: existing } = await sb.from('rooms').select('id').eq('room_code', gmCode);
+  if (existing && existing.length > 0) { err.textContent = '该房间码已存在，请换一个'; return; }
+  const { data: allRooms } = await sb.from('rooms').select('room_number').order('room_number', {ascending:false}).limit(1);
+  const nextNum = allRooms && allRooms.length > 0 ? allRooms[0].room_number + 1 : 1;
+  const { data: room, error } = await sb.from('rooms').insert({
+    room_code: gmCode, room_number: nextNum, admin_password: ADMIN_PASSWORD
+  }).select().single();
+  if (error) { err.textContent = '创建失败：' + error.message; return; }
+  await sb.from('players').insert({ room_id: room.id, name: '王座', access_code: gmCode, is_gm: true, seat_number: 0 });
+  for (let i = 1; i <= 6; i++) {
+    await sb.from('display_zones').insert({ room_id: room.id, zone_number: i, name: '展示区' + i, visible_to: [] });
+  }
   document.getElementById('cr-show-code').textContent = gmCode;
   document.getElementById('cr-result').style.display = 'block';
   document.getElementById('cr-gm-code').value = '';
